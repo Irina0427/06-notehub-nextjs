@@ -6,7 +6,7 @@ import Pagination from '@/components/Pagination/Pagination';
 import type { Note } from '@/types/note';
 
 interface NotesPageProps {
-  notes: Note[];
+  notes: Note[];                   
   totalPages: number;
   page: number;
   search: string;
