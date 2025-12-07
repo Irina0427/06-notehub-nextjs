@@ -1,22 +1,14 @@
+// app/notes/Notes.client.tsx
 'use client';
 
-import { useState } from 'react';
-import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useDebounce } from 'use-debounce';
-
-import { fetchNotes, deleteNote } from '@/lib/api';
-import type { FetchNotesResponse } from '@/lib/api';
-import type { Note } from '@/types/note';
-
+import { useRouter } from 'next/navigation';
+import { fetchNotes, type FetchNotesResponse } from '@/lib/api';
 import NotesPage from '@/components/NotesPage/NotesPage';
-import Modal from '@/components/Modal/Modal';
-import NoteForm from '@/components/NoteForm/NoteForm';
-import Loader from '../loading';
-import ErrorMessage from '@/components/ErrorMessage/ErrorMessage';
 
-const PER_PAGE = 12;
-
-interface NotesClientProps {
+export interface NotesClientProps {
   initialPage: number;
   initialSearch: string;
 }
@@ -27,58 +19,69 @@ export default function NotesClient({
 }: NotesClientProps) {
   const [page, setPage] = useState(initialPage);
   const [search, setSearch] = useState(initialSearch);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [debouncedSearch] = useDebounce(search, 300);
 
-  const [debouncedSearch] = useDebounce(search, 500);
-  const queryClient = useQueryClient();
+  const router = useRouter();
 
-  const { data, isLoading, isError, error } = useQuery<FetchNotesResponse>({
-    queryKey: ['notes', page, debouncedSearch],
+  // синхронізуємо URL з page/search
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    if (page > 1) params.set('page', String(page));
+    if (debouncedSearch) params.set('search', debouncedSearch);
+
+    const qs = params.toString();
+    router.replace(qs ? `/notes?${qs}` : '/notes');
+  }, [page, debouncedSearch, router]);
+
+  const {
+    data,
+    isLoading,
+    error,
+    // ✅ у v5 це isPlaceholderData, а не isPreviousData
+    isPlaceholderData,
+  } = useQuery<FetchNotesResponse, Error>({
+    queryKey: ['notes', { page, search: debouncedSearch }],
     queryFn: () =>
       fetchNotes({
         page,
-        perPage: PER_PAGE,
+        perPage: 12,
         search: debouncedSearch || undefined,
       }),
     placeholderData: keepPreviousData,
   });
 
-  const notes: Note[] = data?.notes ?? [];
-  const totalPages = data?.totalPages ?? 1;
+  const notes = data?.notes ?? [];
+  const totalPages = data?.totalPages ?? 0;
 
-  const handleDelete = async (id: string) => {
-    await deleteNote(id);
-    queryClient.invalidateQueries({ queryKey: ['notes'] });
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
   };
 
-  const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => setIsModalOpen(false);
+  const handlePageChange = (nextPage: number) => {
 
-  if (isLoading) {
-    return <Loader />;
+    if (!isPlaceholderData) {
+      setPage(nextPage);
+    }
+  };
+
+  if (isLoading && !data) {
+    return <p>Loading, please wait...</p>;
   }
 
-  if (isError) {
-    const message = (error as Error)?.message ?? 'Unknown error';
-    return <ErrorMessage message={message} />;
+  if (error) {
+    return <p>Something went wrong.</p>;
   }
 
   return (
-    <>
-      <NotesPage
-        notes={notes}
-        totalPages={totalPages}
-        page={page}
-        search={search}
-        onSearchChange={setSearch}
-        onPageChange={setPage}
-        onDelete={handleDelete}
-        onOpenModal={handleOpenModal}
-      />
-
-      <Modal isOpen={isModalOpen} onClose={handleCloseModal}>
-        <NoteForm onClose={handleCloseModal} />
-      </Modal>
-    </>
+    <NotesPage
+      notes={notes}
+      totalPages={totalPages}
+      page={page}
+      search={search}
+      onSearchChange={handleSearchChange}
+      onPageChange={handlePageChange}
+    />
   );
 }
