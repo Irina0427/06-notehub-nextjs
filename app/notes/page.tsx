@@ -1,4 +1,3 @@
-// app/notes/page.tsx
 import {
   QueryClient,
   dehydrate,
@@ -21,18 +20,21 @@ export default async function NotesPage({ searchParams }: NotesPageServerProps) 
   const queryClient = new QueryClient();
 
   await queryClient.prefetchQuery({
-    queryKey: ['notes', { page: initialPage, search: initialSearch }],
+    queryKey: ['notes', initialPage, initialSearch],
     queryFn: () =>
       fetchNotes({
         page: initialPage,
-        perPage: 12,
+        perPage: 12,         
         search: initialSearch || undefined,
       }),
   });
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <NotesClient initialPage={initialPage} initialSearch={initialSearch} />
+      <NotesClient
+        initialPage={initialPage}
+        initialSearch={initialSearch}
+      />
     </HydrationBoundary>
   );
 }
