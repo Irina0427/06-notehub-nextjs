@@ -1,6 +1,6 @@
 import css from './Footer.module.css';
 
-export function Footer() {
+export default function Footer() {
   return (
     <footer className={css.footer}>
       <div className={css.content}>
@@ -8,8 +8,8 @@ export function Footer() {
         <div className={css.wrap}>
           <p>Developer: Iryna Yaychenya</p>
           <p>
-            Contact us:{' '}
-            <a href="mailto:student@notehub.app">student@notehub.app</a>
+            Contact us:
+            <a href="mailto:student@notehub.app"> yaychenya2014@gmail.com</a>
           </p>
         </div>
       </div>

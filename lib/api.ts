@@ -1,6 +1,19 @@
 import axios from 'axios';
 import type { Note, NoteTag } from '@/types/note';
 
+const token = process.env.NEXT_PUBLIC_NOTEHUB_TOKEN as string | undefined;
+
+if (!token) {
+  throw new Error('NEXT_PUBLIC_NOTEHUB_TOKEN is missing');
+}
+
+const api = axios.create({
+  baseURL: 'https://notehub-public.goit.study/api',
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
+
 export interface FetchNotesParams {
   page?: number;
   perPage?: number;
@@ -17,23 +30,6 @@ export interface CreateNotePayload {
   content: string;
   tag: NoteTag;
 }
-
-export interface DeleteNoteResponse {
-  note: Note;
-}
-
-const token = process.env.NEXT_PUBLIC_NOTEHUB_TOKEN;
-
-if (!token) {
-  throw new Error('NEXT_PUBLIC_NOTEHUB_TOKEN is missing');
-}
-
-const api = axios.create({
-  baseURL: 'https://notehub-public.goit.study/api',
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
 
 export async function fetchNotes(
   params: FetchNotesParams,
@@ -54,12 +50,12 @@ export async function createNote(
   return data;
 }
 
-export async function fetchNoteById(id: string): Promise<Note> {
-  const { data } = await api.get<Note>(`/notes/${id}`);
+export async function deleteNote(id: string): Promise<Note> {
+  const { data } = await api.delete<Note>(`/notes/${id}`);
   return data;
 }
 
-export async function deleteNote(id: string): Promise<DeleteNoteResponse> {
-  const { data } = await api.delete<DeleteNoteResponse>(`/notes/${id}`);
+export async function fetchNoteById(id: string): Promise<Note> {
+  const { data } = await api.get<Note>(`/notes/${id}`);
   return data;
 }

@@ -1,19 +1,23 @@
 'use client';
 
-import { ReactNode, MouseEvent } from 'react';
+import type { ReactNode, MouseEvent } from 'react';
 import css from './Modal.module.css';
 
 interface ModalProps {
+  children: ReactNode;
   isOpen: boolean;
   onClose: () => void;
-  children: ReactNode;
 }
 
-export default function Modal({ isOpen, onClose, children }: ModalProps) {
-  if (!isOpen) return null;
+export default function Modal({ children, isOpen, onClose }: ModalProps) {
+  if (!isOpen) {
+    return null;
+  }
 
-  const handleBackdropClick = (e: MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) onClose();
+  const handleBackdropClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
   };
 
   return (
@@ -21,9 +25,9 @@ export default function Modal({ isOpen, onClose, children }: ModalProps) {
       <div className={css.modal}>
         <button
           type="button"
-          className={css.closeBtn}
+          className={css.closeButton}
           onClick={onClose}
-          aria-label="Close"
+          aria-label="Close modal"
         >
           ×
         </button>

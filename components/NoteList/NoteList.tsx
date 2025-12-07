@@ -1,30 +1,43 @@
-import css from './NoteList.module.css';
+'use client';
+
 import Link from 'next/link';
-import { deleteNote } from '@/lib/api';
+import css from './NoteList.module.css';
 import type { Note } from '@/types/note';
 
-interface Props {
+export interface NoteListProps {
   notes: Note[];
+  onDelete: (id: string) => void;
 }
 
-export default function NoteList({ notes }: Props) {
+export default function NoteList({ notes, onDelete }: NoteListProps) {
+  if (!notes.length) {
+    return <p className={css.empty}>No notes found.</p>;
+  }
+
   return (
     <ul className={css.list}>
-      {notes.map(note => (
-        <li key={note.id} className={css.card}>
-          <h3 className={css.title}>{note.title}</h3>
+      {notes.map((note) => (
+        <li key={note.id} className={css.item}>
+          <div className={css.header}>
+            <h2 className={css.title}>{note.title}</h2>
+            <span className={css.tag}>{note.tag}</span>
+          </div>
+
           <p className={css.content}>{note.content}</p>
 
-          <span className={css.tag}>{note.tag}</span>
+          <p className={css.date}>
+            {new Date(note.createdAt).toLocaleDateString()}
+          </p>
 
           <div className={css.actions}>
-            <Link href={`/notes/${note.id}`} className={css.details}>
+            <Link href={`/notes/${note.id}`} className={css.link}>
               View details
             </Link>
 
             <button
-              className={css.delete}
-              onClick={() => deleteNote(note.id)}
+              type="button"
+              className={css.deleteButton}
+              onClick={() => onDelete(note.id)}
             >
               Delete
             </button>

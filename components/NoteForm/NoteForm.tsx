@@ -1,85 +1,130 @@
 'use client';
 
-import { useState } from 'react';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import type { FormikHelpers } from 'formik';
+import * as Yup from 'yup';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import css from './NoteForm.module.css';
-import Modal from '@/components/Modal/Modal';
 import { createNote } from '@/lib/api';
-import { NoteTag } from '@/types/note';
+import type { CreateNotePayload } from '@/lib/api';
+import type { NoteTag } from '@/types/note';
 
-export default function NoteForm() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [tag, setTag] = useState<NoteTag>('Todo');
+interface NoteFormProps {
+  onClose?: () => void;
+}
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await createNote({ title, content, tag });
-    setIsOpen(false);
-    setTitle('');
-    setContent('');
-    setTag('Todo');
+interface FormValues {
+  title: string;
+  content: string;
+  tag: NoteTag | '';
+}
+
+const validationSchema = Yup.object({
+  title: Yup.string()
+    .min(3, 'Min 3 characters')
+    .max(50, 'Max 50 characters')
+    .required('Title is required'),
+  content: Yup.string().max(500, 'Max 500 characters'),
+  tag: Yup.mixed<NoteTag>()
+    .oneOf(['Todo', 'Work', 'Personal', 'Meeting', 'Shopping'])
+    .required('Tag is required'),
+});
+
+const initialValues: FormValues = {
+  title: '',
+  content: '',
+  tag: '',
+};
+
+export default function NoteForm({ onClose }: NoteFormProps) {
+  const queryClient = useQueryClient();
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: (payload: CreateNotePayload) => createNote(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      onClose?.();
+    },
+  });
+
+  const handleSubmit = (
+    values: FormValues,
+    helpers: FormikHelpers<FormValues>,
+  ) => {
+    const { title, content, tag } = values;
+
+    mutate(
+      { title, content, tag: tag as NoteTag },
+      {
+        onSettled: () => helpers.setSubmitting(false),
+      },
+    );
   };
 
   return (
-    <>
-      <button className={css.createBtn} onClick={() => setIsOpen(true)}>
-        Створити нотатку
-      </button>
+    <Formik<FormValues>
+      initialValues={initialValues}
+      validationSchema={validationSchema}
+      onSubmit={handleSubmit}
+    >
+      {({ isSubmitting, resetForm }) => (
+        <Form className={css.form}>
+          <div className={css.formGroup}>
+            <label htmlFor="title">Title</label>
+            <Field id="title" name="title" className={css.input} />
+            <ErrorMessage name="title" component="span" className={css.error} />
+          </div>
 
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
-        <form className={css.form} onSubmit={handleSubmit}>
-          <h2 className={css.title}>Створити нотатку</h2>
-
-          <label className={css.label}>
-            Назва
-            <input
-              className={css.input}
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              required
-            />
-          </label>
-
-          <label className={css.label}>
-            Зміст
-            <textarea
+          <div className={css.formGroup}>
+            <label htmlFor="content">Content</label>
+            <Field
+              as="textarea"
+              id="content"
+              name="content"
+              rows={8}
               className={css.textarea}
-              value={content}
-              onChange={e => setContent(e.target.value)}
-              required
             />
-          </label>
+            <ErrorMessage
+              name="content"
+              component="span"
+              className={css.error}
+            />
+          </div>
 
-          <label className={css.label}>
-            Тег
-            <select
-              className={css.select}
-              value={tag}
-              onChange={e => setTag(e.target.value as NoteTag)}
-            >
+          <div className={css.formGroup}>
+            <label htmlFor="tag">Tag</label>
+            <Field as="select" id="tag" name="tag" className={css.select}>
+              <option value="">Select tag</option>
               <option value="Todo">Todo</option>
               <option value="Work">Work</option>
               <option value="Personal">Personal</option>
               <option value="Meeting">Meeting</option>
               <option value="Shopping">Shopping</option>
-            </select>
-          </label>
+            </Field>
+            <ErrorMessage name="tag" component="span" className={css.error} />
+          </div>
 
-          <div className={css.buttons}>
-            <button type="submit" className={css.save}>
-              Зберегти
-            </button>
+          <div className={css.actions}>
             <button
               type="button"
-              className={css.cancel}
-              onClick={() => setIsOpen(false)}
+              className={css.cancelButton}
+              onClick={() => {
+                resetForm();
+                onClose?.();
+              }}
             >
-              Скасувати
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className={css.submitButton}
+              disabled={isSubmitting || isPending}
+            >
+              Create note
             </button>
           </div>
-        </form>
-      </Modal>
-    </>
+        </Form>
+      )}
+    </Formik>
   );
 }
