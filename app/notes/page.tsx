@@ -1,3 +1,4 @@
+
 import {
   QueryClient,
   dehydrate,
@@ -14,27 +15,24 @@ type NotesPageServerProps = {
 };
 
 export default async function NotesPage({ searchParams }: NotesPageServerProps) {
-  const initialPage = Number(searchParams?.page ?? '1') || 1;
-  const initialSearch = searchParams?.search ?? '';
+  const page = Number(searchParams?.page ?? '1') || 1;
+  const search = searchParams?.search ?? '';
 
   const queryClient = new QueryClient();
 
   await queryClient.prefetchQuery({
-    queryKey: ['notes', initialPage, initialSearch],
+    queryKey: ['notes', page, search, undefined], 
     queryFn: () =>
       fetchNotes({
-        page: initialPage,
-        perPage: 12,         
-        search: initialSearch || undefined,
+        page,
+        perPage: 12,
+        search: search || undefined,
       }),
   });
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <NotesClient
-        initialPage={initialPage}
-        initialSearch={initialSearch}
-      />
+      <NotesClient />
     </HydrationBoundary>
   );
 }

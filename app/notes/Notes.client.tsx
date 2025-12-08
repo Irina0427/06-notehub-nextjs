@@ -1,47 +1,29 @@
-// app/notes/Notes.client.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useDebounce } from 'use-debounce';
-import { useRouter } from 'next/navigation';
-import { fetchNotes, type FetchNotesResponse } from '@/lib/api';
-import NotesPage from '@/components/NotesPage/NotesPage';
 
-export interface NotesClientProps {
-  initialPage: number;
-  initialSearch: string;
-}
+import { fetchNotes, deleteNote } from '@/lib/api';
 
-export default function NotesClient({
-  initialPage,
-  initialSearch,
-}: NotesClientProps) {
-  const [page, setPage] = useState(initialPage);
-  const [search, setSearch] = useState(initialSearch);
-  const [debouncedSearch] = useDebounce(search, 300);
+import SearchBox from '@/components/SearchBox/SearchBox';
+import Pagination from '@/components/Pagination/Pagination';
+import NoteList from '@/components/NoteList/NoteList';
+import NoteForm from '@/components/NoteForm/NoteForm';
+import Modal from '@/components/Modal/Modal';
+import ErrorMessage from '@/components/ErrorMessage/ErrorMessage';
 
-  const router = useRouter();
+import css from './NotesPage.module.css';
 
-  // синхронізуємо URL з page/search
-  useEffect(() => {
-    const params = new URLSearchParams();
+export default function NotesClient() {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-    if (page > 1) params.set('page', String(page));
-    if (debouncedSearch) params.set('search', debouncedSearch);
+  const [debouncedSearch] = useDebounce(search, 500);
 
-    const qs = params.toString();
-    router.replace(qs ? `/notes?${qs}` : '/notes');
-  }, [page, debouncedSearch, router]);
-
-  const {
-    data,
-    isLoading,
-    error,
-    // ✅ у v5 це isPlaceholderData, а не isPreviousData
-    isPlaceholderData,
-  } = useQuery<FetchNotesResponse, Error>({
-    queryKey: ['notes', { page, search: debouncedSearch }],
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['notes', page, debouncedSearch],
     queryFn: () =>
       fetchNotes({
         page,
@@ -51,37 +33,48 @@ export default function NotesClient({
     placeholderData: keepPreviousData,
   });
 
-  const notes = data?.notes ?? [];
-  const totalPages = data?.totalPages ?? 0;
-
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setPage(1);
+  const handleDelete = async (id: string) => {
+    await deleteNote(id);
   };
 
-  const handlePageChange = (nextPage: number) => {
-
-    if (!isPlaceholderData) {
-      setPage(nextPage);
-    }
-  };
-
-  if (isLoading && !data) {
-    return <p>Loading, please wait...</p>;
+  if (isLoading) {
+    return <p>Loading...</p>;
   }
 
   if (error) {
-    return <p>Something went wrong.</p>;
+    const message =
+      error instanceof Error ? error.message : 'Something went wrong.';
+    return <ErrorMessage message={message} />;
   }
 
   return (
-    <NotesPage
-      notes={notes}
-      totalPages={totalPages}
-      page={page}
-      search={search}
-      onSearchChange={handleSearchChange}
-      onPageChange={handlePageChange}
-    />
+    <section className={css.section}>
+      <div className={css.topBar}>
+        <SearchBox value={search} onChange={setSearch} />
+
+        <button
+          className={css.createButton}
+          onClick={() => setIsModalOpen(true)}
+        >
+          Create note +
+        </button>
+      </div>
+
+      {data && <NoteList notes={data.notes} onDelete={handleDelete} />}
+
+      {data && data.totalPages > 1 && (
+        <Pagination
+          page={page}
+          totalPages={data.totalPages}
+          onChange={setPage}
+        />
+      )}
+
+      {isModalOpen && (
+        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+          <NoteForm onClose={() => setIsModalOpen(false)} />
+        </Modal>
+      )}
+    </section>
   );
 }

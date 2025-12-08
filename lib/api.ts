@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Note, NoteTag } from '@/types/note';
 
-const token = process.env.NEXT_PUBLIC_NOTEHUB_TOKEN as string | undefined;
+const token = process.env.NEXT_PUBLIC_NOTEHUB_TOKEN;
 
 if (!token) {
   throw new Error('NEXT_PUBLIC_NOTEHUB_TOKEN is missing');
@@ -18,6 +18,7 @@ export interface FetchNotesParams {
   page?: number;
   perPage?: number;
   search?: string;
+  tag?: NoteTag | 'all';
 }
 
 export interface FetchNotesResponse {
@@ -34,10 +35,17 @@ export interface CreateNotePayload {
 export async function fetchNotes(
   params: FetchNotesParams,
 ): Promise<FetchNotesResponse> {
-  const { page = 1, perPage = 12, search } = params;
+  const { page = 1, perPage = 12, search, tag } = params;
+
+  const queryParams: Record<string, string | number | undefined> = {
+    page,
+    perPage,
+    search: search || undefined,
+    tag: tag && tag !== 'all' ? tag : undefined,
+  };
 
   const { data } = await api.get<FetchNotesResponse>('/notes', {
-    params: { page, perPage, search },
+    params: queryParams,
   });
 
   return data;

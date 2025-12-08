@@ -1,38 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-
-import css from './NoteList.module.css';
 import type { Note } from '@/types/note';
-import { deleteNote } from '@/lib/api';
+import css from './NoteList.module.css';
 
 interface NoteListProps {
   notes: Note[];
+  onDelete: (id: string) => void | Promise<void>;
 }
 
-export default function NoteList({ notes }: NoteListProps) {
-  const queryClient = useQueryClient();
-
-  const { mutate, isPending } = useMutation({
-    mutationFn: (id: string) => deleteNote(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notes'] });
-    },
-  });
-
-  const handleDelete = (id: string) => {
-    if (isPending) return;
-    mutate(id);
-  };
-
+export default function NoteList({ notes, onDelete }: NoteListProps) {
   if (!notes.length) {
-    return <p className={css.empty}>No notes found.</p>;
+    return <p className={css.empty}>No notes found</p>;
   }
 
   return (
     <ul className={css.list}>
-      {notes.map((note) => (
+      {notes.map(note => (
         <li key={note.id} className={css.item}>
           <div className={css.header}>
             <h2 className={css.title}>{note.title}</h2>
@@ -53,8 +37,7 @@ export default function NoteList({ notes }: NoteListProps) {
             <button
               type="button"
               className={css.deleteButton}
-              onClick={() => handleDelete(note.id)}
-              disabled={isPending}
+              onClick={() => onDelete(note.id)}
             >
               Delete
             </button>

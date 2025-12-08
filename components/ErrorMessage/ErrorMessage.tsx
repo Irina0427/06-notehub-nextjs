@@ -7,10 +7,5 @@ interface ErrorMessageProps {
 }
 
 export default function ErrorMessage({ message }: ErrorMessageProps) {
-  return (
-    <div className={css.wrapper}>
-      <p className={css.text}>Something went wrong:</p>
-      <p className={css.message}>{message}</p>
-    </div>
-  );
+  return <p className={css.error}>{message}</p>;
 }
