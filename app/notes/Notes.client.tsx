@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useDebounce } from 'use-debounce';
 
-import { fetchNotes, deleteNote } from '@/lib/api';
+import { fetchNotes } from '@/lib/api';
 
 import SearchBox from '@/components/SearchBox/SearchBox';
 import Pagination from '@/components/Pagination/Pagination';
@@ -22,6 +22,11 @@ export default function NotesClient() {
 
   const [debouncedSearch] = useDebounce(search, 500);
 
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['notes', page, debouncedSearch],
     queryFn: () =>
@@ -32,10 +37,6 @@ export default function NotesClient() {
       }),
     placeholderData: keepPreviousData,
   });
-
-  const handleDelete = async (id: string) => {
-    await deleteNote(id);
-  };
 
   if (isLoading) {
     return <p>Loading...</p>;
@@ -50,9 +51,10 @@ export default function NotesClient() {
   return (
     <section className={css.section}>
       <div className={css.topBar}>
-        <SearchBox value={search} onChange={setSearch} />
+        <SearchBox value={search} onChange={handleSearchChange} />
 
         <button
+          type="button"
           className={css.createButton}
           onClick={() => setIsModalOpen(true)}
         >
@@ -60,7 +62,7 @@ export default function NotesClient() {
         </button>
       </div>
 
-      {data && <NoteList notes={data.notes} onDelete={handleDelete} />}
+      {data && <NoteList notes={data.notes} />}
 
       {data && data.totalPages > 1 && (
         <Pagination
